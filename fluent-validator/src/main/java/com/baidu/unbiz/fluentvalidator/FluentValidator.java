@@ -61,7 +61,7 @@ public class FluentValidator {
      * @see #failFast()
      * @see #failOver()
      */
-    private boolean isFailFast = true;
+    private boolean isFailFast = false;
 
     /**
      * 验证器上下文
