@@ -1,12 +1,12 @@
 package com.baidu.unbiz.fluentvalidator.util;
 
+import com.baidu.unbiz.fluentvalidator.exception.RuntimeValidateException;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-
-import com.baidu.unbiz.fluentvalidator.exception.RuntimeValidateException;
 
 /**
  * 反射工具类
@@ -184,6 +184,39 @@ public class ReflectionUtil {
         } catch (Exception e) {
             throw new RuntimeValidateException(e);
         }
+    }
+
+    static Field getFieldOfClass(Class<?> claz, String fieldName) {
+
+        Class clazz = claz;
+        while (clazz != Object.class) {
+            for (Field declaredField : clazz.getDeclaredFields()) {
+                if(declaredField.getName().equals(fieldName)){
+                    return declaredField;
+                };
+            }
+            clazz = clazz.getSuperclass();
+        }
+
+        throw new RuntimeValidateException("Not found field: " + fieldName);
+    }
+
+    public static Object getFieldValue(Object obj, String fieldName) {
+        Field field = getFieldOfClass(obj.getClass(), fieldName);
+        Method method = ReflectionUtil.getGetterMethod(obj.getClass(), field);
+        return invokeMethod(method, obj);
+    }
+
+    public static Object getComplexFieldValue(Object obj, String complexFieldName) {
+        String[] split = complexFieldName.split("\\.");
+        Object o = obj;
+        for (String fieldName : split) {
+            o = getFieldValue(o, fieldName);
+            if (o == null) {
+                return null;
+            }
+        }
+        return o;
     }
 
 }

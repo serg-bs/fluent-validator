@@ -1,14 +1,5 @@
 package com.baidu.unbiz.fluentvalidator;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.baidu.unbiz.fluentvalidator.able.ListAble;
 import com.baidu.unbiz.fluentvalidator.able.ToStringable;
 import com.baidu.unbiz.fluentvalidator.annotation.NotThreadSafe;
@@ -26,6 +17,15 @@ import com.baidu.unbiz.fluentvalidator.validator.element.IterableValidatorElemen
 import com.baidu.unbiz.fluentvalidator.validator.element.MultiValidatorElement;
 import com.baidu.unbiz.fluentvalidator.validator.element.ValidatorElement;
 import com.baidu.unbiz.fluentvalidator.validator.element.ValidatorElementList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * 链式调用验证器
@@ -51,6 +51,9 @@ public class FluentValidator {
      * 验证器链，惰性求值期间就是不断的改变这个链表，及时求值期间就是遍历链表依次执行验证
      */
     private ValidatorElementList validatorElementList = new ValidatorElementList();
+
+    public static String MAIN_OBJ = "MAIN_OBJ";
+    public static String FIELD = "FIELD";
 
     /**
      * 是否一旦发生验证错误就退出，默认为true
@@ -353,6 +356,25 @@ public class FluentValidator {
         return this;
     }
 
+
+    public <T> FluentValidator onAttr(String attr, Validator... v) {
+        Object mainObj = context.getAttribute(MAIN_OBJ);
+        Object t = ReflectionUtil.getComplexFieldValue(mainObj, attr);
+        Preconditions.checkNotNull(v, "Validator should not be NULL");
+        if (v.length > 0 ){
+            ValidatorChainExt chain = new ValidatorChainExt();
+            chain.setFieldName(attr);
+            List<ValidatorElement> elements = new ArrayList<ValidatorElement>();
+            for(int i=0; i<v.length; ++i){
+                elements.add(new ValidatorElement(t, v[i]));
+            }
+            chain.setValidators(elements);
+            doAdd(chain);
+        }
+        lastAddCount = 1;
+        return this;
+    }
+
     /**
      * 在待验证对象<tt>t</tt>上，使用<tt>chain</tt>验证器链进行验证
      *
@@ -482,33 +504,51 @@ public class FluentValidator {
         long start = System.currentTimeMillis();
         try {
             GroupingHolder.setGrouping(groups);
-            for (ValidatorElement element : validatorElementList.getAllValidatorElements()) {
-                Object target = element.getTarget();
-                Validator v = element.getValidator();
-                try {
-                    if (v.accept(context, target)) {
-                        if (!v.validate(context, target)) {
-                            result.setIsSuccess(false);
-                            if (isFailFast) {
-                                break;
+            boolean exit =false;
+            for (ListAble<ValidatorElement> listAbles : validatorElementList.getList()) {
+                boolean isValidatorchainExt;
+                if(listAbles instanceof ValidatorChainExt){
+                    isValidatorchainExt = true;
+                    ValidatorChainExt validatorChainExt = (ValidatorChainExt) listAbles;
+                    context.setAttribute(FIELD, validatorChainExt.getFieldName());
+                } else {
+                    isValidatorchainExt = false;
+                }
+                for (ValidatorElement element : listAbles.getAsList()) {
+                    Object target = element.getTarget();
+                    Validator v = element.getValidator();
+                    try {
+                        if (v.accept(context, target)) {
+                            if (!v.validate(context, target)) {
+                                result.setIsSuccess(false);
+                                if ( isFailFast) {
+                                    exit = true;
+                                }
+                                if ( isFailFast || isValidatorchainExt) {
+                                    break;
+                                }
                             }
                         }
-                    }
-                } catch (Exception e) {
-                    try {
-                        v.onException(e, context, target);
-                        cb.onUncaughtException(v, e, target);
-                    } catch (Exception e1) {
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.error(v + " onException or onUncaughtException throws exception due to " + e1
-                                    .getMessage(), e1);
+                    } catch (Exception e) {
+                        try {
+                            v.onException(e, context, target);
+                            cb.onUncaughtException(v, e, target);
+                        } catch (Exception e1) {
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.error(v + " onException or onUncaughtException throws exception due to " + e1
+                                        .getMessage(), e1);
+                            }
+                            throw new RuntimeValidateException(e1);
                         }
-                        throw new RuntimeValidateException(e1);
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.error(v + " failed due to " + e.getMessage(), e);
+                        }
+                        throw new RuntimeValidateException(e);
                     }
-                    if (LOGGER.isDebugEnabled()) {
-                        LOGGER.error(v + " failed due to " + e.getMessage(), e);
-                    }
-                    throw new RuntimeValidateException(e);
+                }
+
+                if(exit){
+                    break;
                 }
             }
 

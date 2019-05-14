@@ -1,5 +1,7 @@
 package com.baidu.unbiz.fluentvalidator;
 
+import static com.baidu.unbiz.fluentvalidator.FluentValidator.MAIN_OBJ;
+import static com.baidu.unbiz.fluentvalidator.ResultCollectors.toComplex;
 import static com.baidu.unbiz.fluentvalidator.ResultCollectors.toSimple;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.core.Is.is;
@@ -9,6 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.baidu.unbiz.fluentvalidator.dto.Garage;
+import com.baidu.unbiz.fluentvalidator.util.ReflectionUtil;
+import com.baidu.unbiz.fluentvalidator.validator.NotNullValidator;
+import com.baidu.unbiz.fluentvalidator.validator.StringValidator;
 import com.google.common.collect.Lists;
 import org.junit.Test;
 
@@ -70,6 +75,102 @@ public class FluentValidatorClassTest {
 
         System.out.println(closure.getResult());
         assertThat(closure.getResult().size(), is(3));
+    }
+
+
+    @Test
+    public void testValidatorChainExt() {
+        Car car = getValidCar();
+        car.setLicensePlate(null);
+
+        ComplexResult ret = FluentValidator.checkAll()
+                .failOver()
+                .putAttribute2Context(MAIN_OBJ, car)
+                .onAttr("licensePlate", new NotNullValidator(), new NotNullValidator(), new NotNullValidator())
+                .doValidate().result(toComplex());
+        System.out.println(ret);
+        assertThat(ret.isSuccess(), is(false));
+
+        assertThat(ret.getErrors().size(), is(1));
+        assertThat(ret.getErrors().get(0).getField(), is("licensePlate"));
+    }
+
+    @Test
+    public void testValidatorChainExt2() {
+        Car car = getValidCar();
+        car.setLicensePlate(null);
+        car.setManufacturer(null);
+
+        ComplexResult ret = FluentValidator.checkAll()
+                .failOver()
+                .putAttribute2Context(MAIN_OBJ, car)
+                .onAttr("licensePlate", new NotNullValidator())
+                .onAttr("manufacturer", new NotNullValidator())
+                .doValidate().result(toComplex());
+        System.out.println(ret);
+        assertThat(ret.isSuccess(), is(false));
+
+        assertThat(ret.getErrors().size(), is(2));
+        assertThat(ret.getErrors().get(0).getField(), is("licensePlate"));
+        assertThat(ret.getErrors().get(1).getField(), is("manufacturer"));
+    }
+
+    @Test
+    public void testValidatorChainExt3() {
+        Car car = getValidCar();
+        car.setLicensePlate(null);
+        car.setManufacturer(null);
+
+        ComplexResult ret = FluentValidator.checkAll()
+                .failOver()
+                .putAttribute2Context(MAIN_OBJ, car)
+                .onAttr("licensePlate", new NotNullValidator(), new NotNullValidator(), new NotNullValidator())
+                .onAttr("manufacturer", new NotNullValidator())
+                .doValidate().result(toComplex());
+        System.out.println(ret);
+        assertThat(ret.isSuccess(), is(false));
+
+        assertThat(ret.getErrors().size(), is(2));
+        assertThat(ret.getErrors().get(0).getField(), is("licensePlate"));
+        assertThat(ret.getErrors().get(1).getField(), is("manufacturer"));
+    }
+    @Test
+    public void testValidatorChainExt4() {
+        Car car = getValidCar();
+        car.setLicensePlate(null);
+        car.setManufacturer(null);
+
+        ComplexResult ret = FluentValidator.checkAll()
+                .failOver()
+                .putAttribute2Context(MAIN_OBJ, car)
+                .onAttr("licensePlate", new NotNullValidator(), new NotNullValidator(), new StringValidator())
+                .onAttr("manufacturer", new NotNullValidator())
+                .doValidate().result(toComplex());
+        System.out.println(ret);
+        assertThat(ret.isSuccess(), is(false));
+
+        assertThat(ret.getErrors().size(), is(2));
+        assertThat(ret.getErrors().get(0).getField(), is("licensePlate"));
+        assertThat(ret.getErrors().get(1).getField(), is("manufacturer"));
+    }
+
+    @Test
+    public void testValidatorChainExt5() {
+        Car car = getValidCar();
+        car.setLicensePlate(null);
+        car.setManufacturer(null);
+
+        ComplexResult ret = FluentValidator.checkAll()
+                .failFast()
+                .putAttribute2Context(MAIN_OBJ, car)
+                .onAttr("licensePlate", new NotNullValidator(), new NotNullValidator(), new StringValidator())
+                .onAttr("manufacturer", new NotNullValidator())
+                .doValidate().result(toComplex());
+        System.out.println(ret);
+        assertThat(ret.isSuccess(), is(false));
+
+        assertThat(ret.getErrors().size(), is(1));
+        assertThat(ret.getErrors().get(0).getField(), is("licensePlate"));
     }
 
     @Test
