@@ -54,6 +54,7 @@ public class FluentValidator {
 
     public static String MAIN_OBJ = "MAIN_OBJ";
     public static String FIELD = "FIELD";
+    public static String FIELD_CONTEXT_PREFIX = "FIELD_CONTEXT_PREFIX";
 
     /**
      * 是否一旦发生验证错误就退出，默认为true

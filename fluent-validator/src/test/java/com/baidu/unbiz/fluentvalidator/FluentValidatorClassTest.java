@@ -1,5 +1,6 @@
 package com.baidu.unbiz.fluentvalidator;
 
+import static com.baidu.unbiz.fluentvalidator.FluentValidator.FIELD_CONTEXT_PREFIX;
 import static com.baidu.unbiz.fluentvalidator.FluentValidator.MAIN_OBJ;
 import static com.baidu.unbiz.fluentvalidator.ResultCollectors.toComplex;
 import static com.baidu.unbiz.fluentvalidator.ResultCollectors.toSimple;
@@ -171,6 +172,28 @@ public class FluentValidatorClassTest {
 
         assertThat(ret.getErrors().size(), is(1));
         assertThat(ret.getErrors().get(0).getField(), is("licensePlate"));
+    }
+
+
+    @Test
+    public void testValidatorChainExt5_WithPrefix() {
+        Car car = getValidCar();
+        car.setLicensePlate(null);
+        car.setManufacturer(null);
+
+        String prefix = "my_long[i].prefix.";
+        ComplexResult ret = FluentValidator.checkAll()
+                .failFast()
+                .putAttribute2Context(MAIN_OBJ, car)
+                .putAttribute2Context(FIELD_CONTEXT_PREFIX, prefix)
+                .onAttr("licensePlate", new NotNullValidator(), new NotNullValidator(), new StringValidator())
+                .onAttr("manufacturer", new NotNullValidator())
+                .doValidate().result(toComplex());
+        System.out.println(ret);
+        assertThat(ret.isSuccess(), is(false));
+
+        assertThat(ret.getErrors().size(), is(1));
+        assertThat(ret.getErrors().get(0).getField(), is(prefix+"licensePlate"));
     }
 
     @Test
