@@ -51,7 +51,7 @@ public class ValidatorContext {
      * @param validationError 验证错误
      */
     public void addError(ValidationError validationError) {
-        if(attributes !=null) {
+        if(attributes !=null && validationError.getField() == null) {
             String field = (String) attributes.get(FluentValidator.FIELD);
             if (field != null) {
                 String prefix = (String) attributes.get(FluentValidator.FIELD_CONTEXT_PREFIX);

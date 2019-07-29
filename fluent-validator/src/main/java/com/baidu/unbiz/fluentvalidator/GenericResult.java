@@ -16,7 +16,7 @@ public abstract class GenericResult<T> {
     /**
      * 是否验证成功，只要有一个失败就为false
      */
-    private boolean isSuccess;
+    private boolean isSuccess = true;
 
     /**
      * 错误消息列表
